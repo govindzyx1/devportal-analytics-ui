@@ -1,0 +1,120 @@
+<?php
+
+use Drupal\devconnect_developer_apps\DeveloperAppEntity;
+
+function apigee_developer_app_analytics_menu() {
+    $items['user/%user/app-analytics/%'] = array(
+        'title' => '!app detail',
+        'title arguments' => array('!app' => _devconnect_developer_app_analytics_get_app_label(FALSE)),
+        'page callback' => 'devconnect_developer_app_analytics_detail',
+        'page arguments' => array(1, 3),
+        'access callback' => 'devconnect_developer_apps_access',
+        'access arguments' => array(1, 'view'),
+        'type' => MENU_CALLBACK,
+        'weight' => 0,
+    );
+    return $items;
+}
+
+
+function devconnect_developer_app_analytics_detail(stdClass $user, $app_id) {
+    devconnect_developer_apps_check_uuid($app_id, 'user/:uid:/app-analytics/:appId:', $user);
+
+    $entities = entity_load('developer_app', array($app_id), array('mail' => $user->mail));
+    $entity = reset($entities);
+    if (empty($entity)) {
+        drupal_not_found();
+        exit;
+    }
+    return _devconnect_developer_app_analytics_detail($entity, $user);
+}
+
+function _devconnect_developer_app_analytics_detail(DeveloperAppEntity $entity, stdClass $user, $page = TRUE) {
+    $breadcrumb = array();
+    if ($page) {
+        // Build breadcrumbs.
+        $middle_arg = $user->uid;
+        $label = _devconnect_developer_apps_get_app_label(TRUE);
+        if ($user->uid == $GLOBALS['user']->uid) {
+            if (module_exists('me')) {
+                $middle_arg = 'me';
+            }
+            $breadcrumb_caption = t("My $label");
+        }
+        else {
+            $breadcrumb_caption = t("@name’s $label", array('@name' => $user->name));
+        }
+        $breadcrumb[] = l(t('Home'), '<front>');
+        $breadcrumb[] = l($breadcrumb_caption, 'user/' . $middle_arg . '/apps');
+    }
+
+    if (array_key_exists('DisplayName', $entity->attributes) && !empty($entity->attributes['DisplayName'])) {
+        $display_name = $entity->attributes['DisplayName'];
+    }
+    else {
+        $display_name = $entity->name;
+    }
+    if ($page) {
+        // Set Title.
+        drupal_set_title(t($display_name) . " App Analytics");
+        // Set Breadcrumbs.
+        drupal_set_breadcrumb($breadcrumb);
+    }
+
+    $app_name = $entity->name;
+
+    module_load_include('inc', 'devconnect_developer_apps', 'devconnect_developer_apps.theme');
+
+    $panes = array();
+    $info = array();
+
+    module_load_include('inc', 'apigee_developer_app_analytics', 'developer_app_analytics');
+
+    $info['analytics_chart'] = developer_app_analytics_performance($user, $entity->appId, $app_name);
+
+    $panes[] = devconnect_developer_apps_performance_pane($info);
+
+    return '<div id="developer-app-detail-tabs">'
+        . theme('developer_app_tabs', array('tab_links' => $tabs))
+        . theme('developer_app_panes', array('panes' => $panes))
+        . '</div>';
+}
+
+function _devconnect_developer_app_analytics_get_app_label($plural = FALSE, $lowercase = FALSE) {
+    $form_value = variable_get('myapis', 0);
+    switch (variable_get('myapis', 0)) {
+        case 0:
+            $label = $lowercase ? 'app' : 'App';
+            break;
+
+        case 1:
+            $label = 'API';
+            break;
+
+        case 2:
+            $label = $lowercase ? 'key' : 'Key';
+            break;
+
+        default:
+            $label = variable_get('myapis_label', 'App');
+            break;
+    }
+    if ($plural) {
+        $label .= 's';
+    }
+    drupal_alter('devconnect_developer_app_label', $label, $form_value, $plural, $lowercase);
+    return $label;
+}
+
+function apigee_developer_app_analytics_form_devconnect_developer_apps_analytics_form_alter(&$form, &$form_state, $form_id) {
+    $module_path = drupal_get_path('module', 'apigee_developer_app_analytics');
+    drupal_add_css("$module_path/css/apigee_developer_app_analytics.css");
+    unset($form['metric']);
+}
+
+function apigee_developer_app_analytics_devconnect_developer_app_list_alter(&$parameters) {
+  foreach ($parameters['applications'] as $key => $app) {
+      $parameters['applications'][$key]['detail_url'] = str_replace("app-detail","app-analytics",$parameters['applications'][$key]['detail_url']);
+  }
+}
+

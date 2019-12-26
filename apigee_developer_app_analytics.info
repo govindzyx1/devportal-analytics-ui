@@ -1,0 +1,4 @@
+name = Apigee Developer App Analytics
+description = Apigee Developer App Analytics
+core = 7.x
+package = Apigee Dev portal

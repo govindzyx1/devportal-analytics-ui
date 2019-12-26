@@ -1,0 +1,17 @@
+#devconnect-developer-apps-analytics-form input#edit-date-from {
+    margin-top: 0px;
+}
+
+
+#devconnect-developer-apps-analytics-form input#edit-date-to {
+    margin-top: 0px;
+}
+
+#devconnect-developer-apps-analytics-form label.control-label {
+    padding-right: 10px;
+    min-width: inherit;
+}
+
+#devconnect-developer-apps-analytics-form button#edit-submit {
+    margin-top: 0px;
+}
